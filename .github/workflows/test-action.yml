@@ -1,0 +1,48 @@
+name: Test Action
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+
+      - name: Prepare changelog fixture
+        run: |
+          set -euo pipefail
+          mkdir -p .tmp/app/.changelog
+          cat > .tmp/app/unreleased.md <<'EOF'
+          ## Unreleased
+
+          - feat: add endpoint
+          - fix: handle edge case
+          EOF
+
+      - name: Run action
+        id: changelog
+        uses: ./
+        with:
+          version: "1.2.3"
+          tag-prefix: "v"
+          working-directory: ".tmp/app"
+
+      - name: Assert outputs and files
+        run: |
+          set -euo pipefail
+          test "${{ steps.changelog.outputs.has-changes }}" = "true"
+          test "${{ steps.changelog.outputs.changelog-path }}" = ".changelog/v1.2.3.md"
+          test -f .tmp/app/.changelog/v1.2.3.md
+          test -f .tmp/app/CHANGELOG.md
+          grep -q "## v1.2.3" .tmp/app/.changelog/v1.2.3.md
+          grep -q "# Changelog" .tmp/app/CHANGELOG.md

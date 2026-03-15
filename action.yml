@@ -1,0 +1,49 @@
+name: action-release-changelog
+description: Moves unreleased notes into a versioned changelog entry and rebuilds CHANGELOG.md.
+
+inputs:
+  version:
+    description: Semantic version without prefix, e.g. 1.2.3
+    required: true
+  tag-prefix:
+    description: Prefix for changelog version sections and files, e.g. v
+    required: false
+    default: "v"
+  working-directory:
+    description: Directory where changelog files are managed
+    required: false
+    default: "."
+  changelog-dir:
+    description: Directory that stores versioned changelog fragments
+    required: false
+    default: ".changelog"
+  unreleased-file:
+    description: Unreleased notes markdown file path relative to working-directory
+    required: false
+    default: "unreleased.md"
+  changelog-file:
+    description: Final aggregated changelog file path relative to working-directory
+    required: false
+    default: "CHANGELOG.md"
+  header-file:
+    description: Header template filename inside changelog-dir
+    required: false
+    default: "_header.md"
+  dry-run:
+    description: If true, reports planned changes without writing files
+    required: false
+    default: "false"
+
+outputs:
+  changelog-path:
+    description: Relative path to the versioned changelog fragment
+  release-body:
+    description: Markdown content for the release body
+  updated-files:
+    description: JSON array of modified files
+  has-changes:
+    description: true if unreleased notes contained changelog content
+
+runs:
+  using: node24
+  main: index.js
