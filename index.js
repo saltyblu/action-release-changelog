@@ -32,7 +32,23 @@ function setOutput(name, value) {
   if (!outputFile) {
     throw new Error("GITHUB_OUTPUT is not set");
   }
-  fs.appendFileSync(outputFile, `${name}=${value}\n`, "utf8");
+
+  fs.appendFileSync(outputFile, formatGitHubOutput(name, value), "utf8");
+}
+
+function formatGitHubOutput(name, value) {
+  const stringValue = String(value ?? "");
+
+  if (!stringValue.includes("\n") && !stringValue.includes("\r")) {
+    return `${name}=${stringValue}\n`;
+  }
+
+  let delimiter = "__GITHUB_OUTPUT_DELIM__";
+  while (stringValue.includes(delimiter)) {
+    delimiter = `${delimiter}_X`;
+  }
+
+  return `${name}<<${delimiter}\n${stringValue}\n${delimiter}\n`;
 }
 
 function validateVersion(version) {
@@ -131,16 +147,18 @@ function collectVersionFragments(changelogDir, tagPrefix) {
     })
     .filter((entry) => entry.content.length > 0);
 
-  fragments.sort((left, right) => {
-    if (left.parsed && right.parsed) {
-      return compareSemverDescending(left.parsed, right.parsed);
-    }
-    if (left.parsed) return -1;
-    if (right.parsed) return 1;
-    return left.name.localeCompare(right.name);
-  });
+  fragments.sort(compareFragmentEntries);
 
   return fragments;
+}
+
+function compareFragmentEntries(left, right) {
+  if (left.parsed && right.parsed) {
+    return compareSemverDescending(left.parsed, right.parsed);
+  }
+  if (left.parsed) return -1;
+  if (right.parsed) return 1;
+  return left.name.localeCompare(right.name);
 }
 
 function buildAggregatedChangelog(header, fragments) {
@@ -240,10 +258,14 @@ if (require.main === module) {
 module.exports = {
   DEFAULT_KEEP_A_CHANGELOG_HEADER,
   DEFAULT_UNRELEASED_TEMPLATE,
+  setOutput,
   validateVersion,
   semverFromLabel,
   compareSemverDescending,
+  compareFragmentEntries,
   normalizeMarkdownBody,
   isMeaningfulBody,
+  collectVersionFragments,
   buildAggregatedChangelog,
+  formatGitHubOutput,
 };
