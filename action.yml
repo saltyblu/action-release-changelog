@@ -33,6 +33,10 @@ inputs:
     description: If true, reports planned changes without writing files
     required: false
     default: "false"
+  fail-on-missing-changelog:
+    description: If true, fails the action when no changelog entry exists for the release (ignored in dry-run)
+    required: false
+    default: "false"
 
 outputs:
   changelog-path:

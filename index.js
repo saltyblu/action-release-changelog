@@ -16,8 +16,6 @@ const DEFAULT_KEEP_A_CHANGELOG_HEADER = [
 const DEFAULT_UNRELEASED_TEMPLATE = [
   "## Unreleased",
   "",
-  "- _No unreleased changes yet._",
-  "",
 ].join("\n");
 
 function getInput(name, fallback = "") {
@@ -185,6 +183,7 @@ function main() {
   const changelogFileInput = getInput("changelog-file", "CHANGELOG.md");
   const headerFileInput = getInput("header-file", "_header.md");
   const dryRun = getInput("dry-run", "false") === "true";
+  const failOnMissingChangelog = getInput("fail-on-missing-changelog", "false") === "true";
 
   validateVersion(version);
 
@@ -224,6 +223,17 @@ function main() {
     }
   }
 
+  const hasChangelogEntry = releaseBody.trim().length > 0;
+  if (!hasChangelogEntry) {
+    const warning = `No changelog entry found for ${tag}. Add unreleased notes before running this action.`;
+    console.warn(warning);
+    console.log(`::warning::${warning}`);
+
+    if (!dryRun && failOnMissingChangelog) {
+      throw new Error(`${warning} Set fail-on-missing-changelog to false to allow empty releases.`);
+    }
+  }
+
   writeFileIfChanged(unreleasedPath, DEFAULT_UNRELEASED_TEMPLATE, dryRun, updatedFiles);
 
   const fragments = collectVersionFragments(changelogDir, tagPrefix);
@@ -242,6 +252,8 @@ function main() {
   console.log(`working-directory=${cwd}`);
   console.log(`tag=${tag}`);
   console.log(`has-changes=${hasChanges}`);
+  console.log(`has-changelog-entry=${hasChangelogEntry}`);
+  console.log(`fail-on-missing-changelog=${failOnMissingChangelog}`);
   console.log(`updated-files=${JSON.stringify(uniqueUpdated)}`);
 }
 

@@ -247,3 +247,51 @@ test("CLI run fails with invalid version", () => {
     });
   });
 });
+
+test("CLI run emits warning when changelog entry is missing", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "release-changelog-missing-entry-"));
+  const outputFile = path.join(tempDir, "github-output.txt");
+
+  fs.writeFileSync(path.join(tempDir, "unreleased.md"), "## Unreleased\n", "utf8");
+  fs.writeFileSync(outputFile, "", "utf8");
+
+  const stdout = execFileSync("node", ["index.js"], {
+    cwd: path.resolve(__dirname, ".."),
+    env: {
+      ...process.env,
+      INPUT_VERSION: "1.2.3",
+      INPUT_TAG_PREFIX: "v",
+      INPUT_WORKING_DIRECTORY: tempDir,
+      INPUT_DRY_RUN: "true",
+      GITHUB_OUTPUT: outputFile,
+    },
+    encoding: "utf8",
+  });
+
+  assert.match(stdout, /::warning::No changelog entry found for v1\.2\.3/);
+});
+
+test("CLI run fails when fail-on-missing-changelog is true", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "release-changelog-fail-missing-entry-"));
+  const outputFile = path.join(tempDir, "github-output.txt");
+
+  fs.writeFileSync(path.join(tempDir, "unreleased.md"), "## Unreleased\n", "utf8");
+  fs.writeFileSync(outputFile, "", "utf8");
+
+  assert.throws(() => {
+    execFileSync("node", ["index.js"], {
+      cwd: path.resolve(__dirname, ".."),
+      env: {
+        ...process.env,
+        INPUT_VERSION: "1.2.3",
+        INPUT_TAG_PREFIX: "v",
+        INPUT_WORKING_DIRECTORY: tempDir,
+        INPUT_DRY_RUN: "false",
+        INPUT_FAIL_ON_MISSING_CHANGELOG: "true",
+        GITHUB_OUTPUT: outputFile,
+      },
+      encoding: "utf8",
+      stdio: "pipe",
+    });
+  }, /No changelog entry found for v1\.2\.3/);
+});
